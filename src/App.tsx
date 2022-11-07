@@ -1,10 +1,14 @@
 import React from "react";
 import "./App.scss";
+import Table from "./components/Table/Table";
+import { TableDataStatus } from "./components/Table/TableData.config";
 
 function App() {
   return (
     <div className="App">
-      <h3>TanStack</h3>
+      <br />
+      <br />
+      <Table />
     </div>
   );
 }
