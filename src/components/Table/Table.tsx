@@ -1,10 +1,4 @@
-import React, {
-  Fragment,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useReducer, useState } from "react";
 
 import "./Table.scss";
 
@@ -26,6 +20,7 @@ import {
   ColumnDef,
   flexRender,
   FilterFns,
+  ColumnFilter,
 } from "@tanstack/react-table";
 
 import {
@@ -60,8 +55,13 @@ const useFetchDataHook = (queryParams: QueryParams) => {
   const [fetchedData, setFetchedData] = useState<TableData[]>([]);
   useEffect(() => {
     setFetchedData(makeData(20));
-    console.log(queryParams.quoteNumber);
-  }, [queryParams.pageNumber, queryParams.quoteNumber]);
+  }, [
+    queryParams.pageNumber,
+    queryParams.quoteNumber,
+    queryParams.adress,
+    queryParams.contractNumber,
+    queryParams.status,
+  ]);
   return fetchedData;
 };
 
@@ -97,7 +97,7 @@ const SmartTable = () => {
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  console.log(columnFilters, globalFilter);
+
   const columns = useMemo<ColumnDef<TableData, any>[]>(
     () => [
       {
@@ -162,7 +162,6 @@ const SmartTable = () => {
     contractNumber: "",
     quoteNumber: 0,
     status: "",
-    subRows: [],
   });
 
   const data = useFetchDataHook(queryParams);
@@ -178,11 +177,7 @@ const SmartTable = () => {
       columnFilters,
       globalFilter,
     },
-    onColumnFiltersChange: (x) => {
-      if (typeof x === "function") {
-        console.log(x, x());
-      }
-    },
+    onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -197,7 +192,6 @@ const SmartTable = () => {
     debugColumns: false,
   });
 
-  console.log(table.getState());
   useEffect(() => {
     if (table.getState().columnFilters[0]?.id === "quoteNumber") {
       if (table.getState().sorting[0]?.id !== "quoteNumber") {
@@ -205,6 +199,43 @@ const SmartTable = () => {
       }
     }
   }, [table.getState().columnFilters[0]?.id]);
+
+  // also zuerst machen wir ein object aus dem array
+  // der aktiven filter
+  const activeTableFilters = table
+    .getState()
+    .columnFilters.reduce(
+      (carry: Partial<QueryParams>, filter: ColumnFilter) => {
+        return {
+          ...carry,
+          [filter.id]: filter.value,
+        };
+      },
+      {}
+    );
+
+  // dann nutzen wir einen effect um die queryParams zu aktualisieren.
+  // der wird immer aufgerufen wenn einer der 5 werte sich ändert.
+  useEffect(() => {
+    // ?? ist null coaleszenz operator.
+    // wir nutzen die setState setter method um den alten state zu nutzen.
+    setQueryParams((currentParams) => ({
+      contractNumber:
+        activeTableFilters?.contractNumber ?? currentParams.contractNumber,
+      adress: activeTableFilters?.adress ?? currentParams.adress,
+      pageNumber: activeTableFilters?.pageNumber ?? currentParams.pageNumber,
+      quoteNumber: activeTableFilters?.quoteNumber ?? currentParams.quoteNumber,
+      status: activeTableFilters?.status ?? currentParams.status,
+    }));
+  }, [
+    activeTableFilters?.contractNumber,
+    activeTableFilters?.adress,
+    activeTableFilters?.pageNumber,
+    activeTableFilters?.quoteNumber,
+    activeTableFilters?.status,
+  ]);
+
+  console.log("Current Query Params", queryParams);
 
   return (
     <div className="p-2">
@@ -277,14 +308,25 @@ const SmartTable = () => {
       <div className="flex items-center gap-2">
         <button
           className="border rounded p-1"
-          onClick={() => table.setPageIndex(0)}
+          onClick={() => {
+            setQueryParams({
+              ...queryParams,
+              pageNumber: 0,
+            });
+          }}
           disabled={!table.getCanPreviousPage()}
         >
           {"<<"}
         </button>
         <button
           className="border rounded p-1"
-          onClick={() => table.previousPage()}
+          onClick={() => {
+            setQueryParams({
+              ...queryParams,
+              pageNumber: Math.min(table.getState().pagination.pageIndex - 1),
+            });
+            table.nextPage();
+          }}
           disabled={!table.getCanPreviousPage()}
         >
           {"<"}
@@ -294,7 +336,7 @@ const SmartTable = () => {
           onClick={() => {
             setQueryParams({
               ...queryParams,
-              pageNumber: table.getState().pagination.pageIndex + 1,
+              pageNumber: Math.min(table.getState().pagination.pageIndex + 1),
             });
             table.nextPage();
           }}
@@ -304,7 +346,13 @@ const SmartTable = () => {
         </button>
         <button
           className="border rounded p-1"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          onClick={() => {
+            setQueryParams({
+              ...queryParams,
+              pageNumber: table.getPageCount() - 1,
+            });
+          }}
+          // table.setPageIndex(table.getPageCount() - 1)}
           disabled={!table.getCanNextPage()}
         >
           {">>"}
