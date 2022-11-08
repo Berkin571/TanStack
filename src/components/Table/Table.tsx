@@ -100,7 +100,7 @@ const SmartTable = () => {
   const columns = useMemo<ColumnDef<TableData, any>[]>(
     () => [
       {
-        header: "BayernLB",
+        header: "Serviceportal",
         footer: (props) => props.column.id,
         columns: [
           {
