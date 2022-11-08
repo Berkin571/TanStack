@@ -60,7 +60,8 @@ const useFetchDataHook = (queryParams: QueryParams) => {
   const [fetchedData, setFetchedData] = useState<TableData[]>([]);
   useEffect(() => {
     setFetchedData(makeData(20));
-  }, [queryParams.pageNumber]);
+    console.log(queryParams.quoteNumber);
+  }, [queryParams.pageNumber, queryParams.quoteNumber]);
   return fetchedData;
 };
 
@@ -96,7 +97,7 @@ const SmartTable = () => {
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-
+  console.log(columnFilters, globalFilter);
   const columns = useMemo<ColumnDef<TableData, any>[]>(
     () => [
       {
@@ -177,7 +178,11 @@ const SmartTable = () => {
       columnFilters,
       globalFilter,
     },
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (x) => {
+      if (typeof x === "function") {
+        console.log(x, x());
+      }
+    },
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: fuzzyFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -192,6 +197,7 @@ const SmartTable = () => {
     debugColumns: false,
   });
 
+  console.log(table.getState());
   useEffect(() => {
     if (table.getState().columnFilters[0]?.id === "quoteNumber") {
       if (table.getState().sorting[0]?.id !== "quoteNumber") {
